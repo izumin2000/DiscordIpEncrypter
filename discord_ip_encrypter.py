@@ -5,6 +5,7 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 import binascii
 import hashlib
+import requests
 from local_settings import SECRET_KEY
 
 SYMBOLS = ".◘#∴¹▼᠂（◆ን∮♭▘・ｷᛜ"
@@ -38,6 +39,19 @@ def encrypt(ip):
 def is_ip_address(s):
     return bool(re.fullmatch(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", s))
 
+def send_discord(url, content):
+    # urlが設定されていなかったら何もしない(コントリビュータ向け)
+    if not url:
+        return True
+    
+    content = content.replace("\n            ", "\n")
+    content = content.replace("\n        ", "\n")
+    
+    res = requests.post(url, data={'content': content})
+    if (400 <= res.status_code < 600):
+        return False
+        
+    return True
 
 with open(f"{input()}.json", "r", encoding="utf-8") as f:
     data = json.load(f)
