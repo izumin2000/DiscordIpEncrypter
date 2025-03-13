@@ -1,8 +1,4 @@
-*.log
-*.pyc
-.htmlhintrc
-local_settings.py
+*.json
 .env
-private/*
-dynamic/*
+local_settings.py
 __pycache__
