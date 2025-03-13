@@ -6,9 +6,24 @@ from Crypto.Util.Padding import pad
 import binascii
 import hashlib
 import requests
-from local_settings import SECRET_KEY
+from time import sleep
+from datetime import datetime, timezone, timedelta
+import re
+
+DEBUG = True
+
+if DEBUG:
+    from local_settings import *
+else:
+    from config.local_settings import *
 
 SYMBOLS = ".◘#∴¹▼᠂（◆ን∮♭▘・ｷᛜ"
+CHANNEL = {
+    "contact": CONTACT_DISCORD_URL,
+    "new": NEW_DISCORD_URL,
+    "delete": DELETE_DISCORD_URL,
+}
+    
 
 def sha256(check) :
     check += SECRET_KEY
@@ -39,26 +54,41 @@ def encrypt(ip):
 def is_ip_address(s):
     return bool(re.fullmatch(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", s))
 
-def send_discord(url, content):
-    # urlが設定されていなかったら何もしない(コントリビュータ向け)
-    if not url:
-        return True
+def parse_iso_datetime(dt_str):
+    dt_match = re.match(r"(.*)([+-]\d{2}):(\d{2})$", dt_str)
+    if dt_match:
+        dt_part, tz_hour, tz_min = dt_match.groups()
+        dt = datetime.strptime(dt_part, "%Y-%m-%dT%H:%M:%S.%f")
+        tz_offset = int(tz_hour) * 60 + int(tz_min)
+        dt = dt.replace(tzinfo=timezone.utc).astimezone(timezone(offset=timedelta(minutes=tz_offset)))
+    else:
+        dt = datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%S.%f")
     
+    return dt.strftime("%Y年%m月%d日%H時%M分%S秒")
+
+def send_discord(url, content):
     content = content.replace("\n            ", "\n")
     content = content.replace("\n        ", "\n")
     
     res = requests.post(url, data={'content': content})
     if (400 <= res.status_code < 600):
+        print(res.reason)
         return False
         
     return True
 
-with open(f"{input()}.json", "r", encoding="utf-8") as f:
-    data = json.load(f)
+for file, channel in CHANNEL.items():
+    path = f"{file}.json"
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
 
-for message in data.get("messages", []):
-    content = message.get("content", "")
-    content = re.sub(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", lambda m: encrypt(m.group()) if is_ip_address(m.group()) else m.group(), content)
-    content = content.replace("\n            ", "\n")
-    content = content.replace("\n        ", "\n")
-    print(content)
+    for message in data.get("messages", []):
+        dt = message.get("timestamp", "")
+        dt = parse_iso_datetime(dt)
+        content = "=" * 30 + dt + "=" * 30 + "\n"
+        content += message.get("content", "")
+        content = re.sub(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", lambda m: encrypt(m.group()) if is_ip_address(m.group()) else m.group(), content)
+        content = content.replace("\n            ", "\n")
+        content = content.replace("\n        ", "\n")
+        sleep(2.1)
+        send_discord(channel, content)
