@@ -7,7 +7,7 @@ import binascii
 import hashlib
 import requests
 from time import sleep
-from datetime import datetime, timezone, timedelta
+from dateutil import parser
 import re
 
 DEBUG = True
@@ -19,7 +19,7 @@ else:
 
 SYMBOLS = ".◘#∴¹▼᠂（◆ን∮♭▘・ｷᛜ"
 CHANNEL = {
-    "contact": CONTACT_DISCORD_URL,
+    # "contact": CONTACT_DISCORD_URL,
     "new": NEW_DISCORD_URL,
     "delete": DELETE_DISCORD_URL,
 }
@@ -54,18 +54,6 @@ def encrypt(ip):
 def is_ip_address(s):
     return bool(re.fullmatch(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", s))
 
-def parse_iso_datetime(dt_str):
-    dt_match = re.match(r"(.*)([+-]\d{2}):(\d{2})$", dt_str)
-    if dt_match:
-        dt_part, tz_hour, tz_min = dt_match.groups()
-        dt = datetime.strptime(dt_part, "%Y-%m-%dT%H:%M:%S.%f")
-        tz_offset = int(tz_hour) * 60 + int(tz_min)
-        dt = dt.replace(tzinfo=timezone.utc).astimezone(timezone(offset=timedelta(minutes=tz_offset)))
-    else:
-        dt = datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%S.%f")
-    
-    return dt.strftime("%Y年%m月%d日%H時%M分%S秒")
-
 def send_discord(url, content):
     content = content.replace("\n            ", "\n")
     content = content.replace("\n        ", "\n")
@@ -84,7 +72,7 @@ for file, channel in CHANNEL.items():
 
     for message in data.get("messages", []):
         dt = message.get("timestamp", "")
-        dt = parse_iso_datetime(dt)
+        dt = parser.parse(dt).strftime("%Y年%m月%d日%H時%M分%S秒")
         content = "=" * 30 + dt + "=" * 30 + "\n"
         content += message.get("content", "")
         content = re.sub(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", lambda m: encrypt(m.group()) if is_ip_address(m.group()) else m.group(), content)
