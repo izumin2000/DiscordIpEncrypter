@@ -66,7 +66,7 @@ def send_discord(url, content):
     return True
 
 for file, channel in CHANNEL.items():
-    path = f"{file}.json"
+    path = f"{file}.json" if DEBUG else f"/home/izuminapp/izuminapp/static/subekashi/{file}.json"
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
